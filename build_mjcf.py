@@ -46,7 +46,8 @@ def capsule_geom(vec, radius, name, mass, rgba=None):
     """生成一个从 body 原点到 vec 的胶囊。总长度 = |vec|，半径收进两端半球里。
 
     ★ 半径夹取改为「按真实截面收，收到就大声报警」——
-      旧版静默 r = min(radius, 0.45L)，把 44mm 的腕部段砍成 19.7mm，碰撞率被悄悄放大。
+      旧版静默 r = min(radius, 0.45L)，把轴心距 43.86mm 的腕部段砍成 19.74mm（填入 26），
+    碰撞率被悄悄放大。注意这里的 L 是未取整的轴心距，不是文档里显示的 44mm。
     """
     L = _norm(vec)
     r = radius
