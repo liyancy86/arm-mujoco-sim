@@ -258,9 +258,30 @@ $ python check_axes.py
 `arm_params.py:439` → `COLLISION_ON = False`，生成出来的模型里 28 个 geom 的
 `contype / conaffinity` 唯一值都是 `0`。**全部 geom 不参与碰撞。**
 
-即使用 `--collision on` 单独生成一份，也只有 **11 个 geom** 参与碰撞：桌面、底板、舵机舱、8 个连杆胶囊。
+即使用 `--collision on` 单独生成一份，参与碰撞的也只有 **11 个 geom**：桌面、底板、舵机舱、8 个连杆胶囊。
 **舵机盒、输出轴、U 型延长臂一律 `contype=0`**，所以"舵机盒撞舵机盒""线束刮舵机"这类情况这套扫描
 根本看不到——它只能查连杆与连杆、连杆与底座、连杆与桌面。这个边界必须和数字一起看。
+
+**「11 个」的依据**在 `check_collision_set.py` 里，从编译后的 `MjModel` 读，不是数 XML 行：
+
+```console
+$ python build_mjcf.py --collision on --out out/arm_collision.xml
+$ python check_collision_set.py
+① 掩码活跃（contype!=0 或 conaffinity!=0）= 11 个；其中 contype!=0 的 = 11 个
+② 掩码相容的 geom 对 = 55 对（不含显式 pair）
+     同 body 被排除     = 1 对
+     父子 body 被排除   = 9 对
+     被 exclude 排除    = 0 对
+③ 四条件全过、可能互碰的 geom 对 = 45 对（含显式 pair 0 个）
+④ 出现在 ③ 里的 geom = 11 个
+```
+
+**为什么不能只凭 `contype=0` 就下结论**：MuJoCo 的碰撞过滤要四条同时成立——
+掩码相容 `(contype_i & conaffinity_j) || (contype_j & conaffinity_i)`、不同 body、
+互不为对方的 parent body、没被 `<contact><exclude>` 排除（或被 `<contact><pair>` 显式指定）。
+只把 `contype` 置 0、而 `conaffinity` 非 0 时，反向那一条仍可能匹配。本模型这两项**同时**为 0，
+`npair=0`、`nexclude=0`，所以"不参与"成立；父子关系另外吃掉了 9 对。
+注意 `①` 和 `④` 都是 11 但含义不同，别当成"11 个 geom 互相都碰"——真正的互碰潜力是 `③` 那 45 对。
 
 原因：现阶段目标是先把几何/运动学骨架建准，不是判撞。历史上算过的碰撞比例是在"腕部半径被静默砍掉
 四分之一"的模型上得到的，真机更粗、更容易撞，所以那些数字偏乐观；后来又发现底座参数整体错了一版。
