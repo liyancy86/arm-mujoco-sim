@@ -489,7 +489,16 @@ def main():
     ap.add_argument("--backlash", type=float, default=P.BACKLASH_DEG,
                     help="总回差度数，比如 0.87；不填则关闭")
     ap.add_argument("--out", default=P.XML_OUT)
+    ap.add_argument("--collision", choices=["on", "off"], default=None,
+                    help="覆盖 arm_params.COLLISION_ON：on=几何参与碰撞，off=全模型关闭")
     args = ap.parse_args()
+
+    if args.collision is not None:
+        P.COLLISION_ON = (args.collision == "on")
+
+    print("配置：COLLISION_ON=%s  backlash=%s°  SHOW_TABLE=%s  SERVO_GEOM_ON=%s"
+          % (P.COLLISION_ON, args.backlash, getattr(P, "SHOW_TABLE", True),
+             getattr(P, "SERVO_GEOM_ON", True)))
 
     xml, chains, report = build(args.backlash)
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), args.out)
@@ -513,7 +522,7 @@ def main():
             tag = "<< " + warn
         elif abs(r_eff - r_in) > 1e-9:
             tag = "<< r 被夹"
-        print("  %-14s %6.0fmm %6.0fmm %6.0fmm   %s"
+        print("  %-14s %6.1fmm %6.1fmm %6.1fmm   %s"
               % (name, r_in * 1000, r_eff * 1000, L * 1000, tag))
     n_seg = len(report)
     n_chain = len(chains)

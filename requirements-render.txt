@@ -1,0 +1,7 @@
+# 出图 / 热力图所需（在 requirements.txt 之上）
+# 只有 tools/render_*.py 与 scan_collision.py --grids>0 会用到。
+-r requirements.txt
+pillow==12.3.0
+matplotlib==3.11.2
+# tools/render_poses.py 若走 GIF 分支还会 import imageio；本机未安装，该分支未验证
+# imageio

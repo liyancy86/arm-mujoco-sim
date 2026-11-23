@@ -28,11 +28,13 @@ import mujoco
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-def load(backlash=None):
-    path = os.path.join(HERE, "arm_real.xml")
+def load(xml=None):
+    path = xml if xml else os.path.join(HERE, "arm_real.xml")
+    if not os.path.isabs(path):
+        path = os.path.join(HERE, path)
     if not os.path.exists(path):
-        raise SystemExit("先跑 build_mjcf.py 生成模型")
-    return mujoco.MjModel.from_xml_path(path)
+        raise SystemExit("先跑 build_mjcf.py --collision on --out out/arm_collision.xml")
+    return mujoco.MjModel.from_xml_path(path), path
 
 
 def classify(m, d):
@@ -111,16 +113,35 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=200000)
     ap.add_argument("--grids", type=int, default=3)
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--xml", default=None,
+                    help="要扫的模型文件；默认 arm_real.xml（该文件默认不含碰撞）")
     ap.add_argument("--outdir", default=os.path.join(HERE, "out"))
     args = ap.parse_args()
     os.makedirs(args.outdir, exist_ok=True)
 
-    m = load()
+    m, mpath = load(args.xml)
     names = [mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, i) for i in range(m.njnt)]
+    # 采样协议（复现必须一起抄走这些）
+    lo = m.jnt_range[:, 0]
+    hi = m.jnt_range[:, 1]
+    n_active = int(np.sum((m.geom_contype != 0) | (m.geom_conaffinity != 0)))
+    print("模型: %s" % os.path.basename(mpath))
+    print("     nbody=%d ngeom=%d（其中参与碰撞 %d 个）mujoco=%s"
+          % (m.nbody, m.ngeom, n_active, mujoco.__version__))
+    if n_active == 0:
+        print("!! 该模型 contype/conaffinity 全为 0，碰撞被关闭，下面所有百分比都会是 0。")
+        print("   先跑：python build_mjcf.py --collision on --out out/arm_collision.xml")
+        print("   再跑：python scan_collision.py --xml out/arm_collision.xml")
     print("关节: %s" % ", ".join(names))
+    print("采样: 每关节在 jnt_range 内独立均匀   n=%d  seed=%d" % (args.n, args.seed))
+    print("限位: %s" % "  ".join("%s[%.1f,%.1f]" % (n, np.degrees(a), np.degrees(b))
+                                 for n, a, b in zip(names, lo, hi)))
+    print("判据: d.ncon>0 且接触对至少一方为 g_* 连杆胶囊；"
+          "每姿态只记首个命中（优先级 self>base>table）")
     print("随机采样 %d 个姿态..." % args.n)
 
-    stats, pairs, worst = random_sweep(m, args.n)
+    stats, pairs, worst = random_sweep(m, args.n, seed=args.seed)
     tot = sum(stats.values())
     print("-" * 60)
     print("安全姿态   %7d  (%.1f%%)" % (stats["free"], stats["free"] / tot * 100))
