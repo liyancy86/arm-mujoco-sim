@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行产物：碰撞扫描会往这里写热力图和危险姿态列表
+out/
+
+# 下划线开头的都是调试脚本 / 临时图 / 参数备份，不进仓库
+_*.py
+_*.png
+_*.xml
+_*.html
+arm_params.bak_*.py
+arm_params.orig.py
+*.bak_before_*
+
+# 原始资料：舵机规格书的扫描页与参考照片（第三方版权，不入库）
+datasheet_pages/
+ref_servo/
+sts3215_datasheet.pdf
+ref_folded.jpg
+
+# 系统
+.DS_Store
+Thumbs.db
